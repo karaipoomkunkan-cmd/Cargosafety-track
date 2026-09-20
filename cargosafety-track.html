@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>CargoSafety Track</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+/* ===== Leaflet core CSS (inline แทนการโหลด stylesheet ภายนอก) ===== */
+.leaflet-pane,.leaflet-tile,.leaflet-marker-icon,.leaflet-marker-shadow,.leaflet-tile-container,.leaflet-pane>svg,.leaflet-pane>canvas,.leaflet-zoom-box,.leaflet-image-layer,.leaflet-layer{position:absolute;left:0;top:0;}
+.leaflet-container{overflow:hidden;background:#ddd;}
+.leaflet-tile,.leaflet-marker-icon,.leaflet-marker-shadow{-webkit-user-select:none;user-select:none;-webkit-user-drag:none;}
+.leaflet-tile::selection{background:transparent;}
+.leaflet-marker-icon,.leaflet-marker-shadow{display:block;}
+.leaflet-tile-container{width:256px;height:256px;}
+.leaflet-tile{filter:inherit;visibility:hidden;}
+.leaflet-tile-loaded{visibility:inherit;}
+.leaflet-zoom-box{width:0;height:0;-moz-box-sizing:border-box;box-sizing:border-box;z-index:800;}
+.leaflet-overlay-pane svg{-moz-user-select:none;}
+.leaflet-pane{z-index:400;}
+.leaflet-tile-pane{z-index:200;}
+.leaflet-overlay-pane{z-index:400;}
+.leaflet-shadow-pane{z-index:500;}
+.leaflet-marker-pane{z-index:600;}
+.leaflet-tooltip-pane{z-index:650;}
+.leaflet-popup-pane{z-index:700;}
+.leaflet-map-pane canvas{z-index:100;}
+.leaflet-map-pane svg{z-index:200;}
+.leaflet-control{position:relative;z-index:800;pointer-events:visiblePainted;pointer-events:auto;}
+.leaflet-top,.leaflet-bottom{position:absolute;z-index:1000;pointer-events:none;}
+.leaflet-top{top:0;}.leaflet-right{right:0;}.leaflet-bottom{bottom:0;}.leaflet-left{left:0;}
+.leaflet-control{float:left;clear:both;}
+.leaflet-right .leaflet-control{float:right;}
+.leaflet-top .leaflet-control{margin-top:10px;}
+.leaflet-bottom .leaflet-control{margin-bottom:10px;}
+.leaflet-left .leaflet-control{margin-left:10px;}
+.leaflet-right .leaflet-control{margin-right:10px;}
+.leaflet-control-zoom a{background:#fff;color:#333;display:block;text-align:center;text-decoration:none;width:30px;height:30px;line-height:30px;font-size:18px;}
+.leaflet-control-zoom-in{border-radius:4px 4px 0 0;}
+.leaflet-control-zoom-out{border-radius:0 0 4px 4px;}
+.leaflet-control-zoom{box-shadow:0 1px 5px rgba(0,0,0,0.4);border-radius:4px;}
+.leaflet-popup{position:absolute;text-align:center;margin-bottom:20px;}
+.leaflet-popup-content-wrapper{padding:1px;text-align:left;border-radius:12px;background:#fff;color:#222;box-shadow:0 3px 14px rgba(0,0,0,0.4);}
+.leaflet-popup-content{margin:13px 24px 13px 20px;line-height:1.4;font-size:13px;min-height:1px;}
+.leaflet-popup-tip-container{width:40px;height:20px;position:absolute;left:50%;margin-left:-20px;overflow:hidden;pointer-events:none;}
+.leaflet-popup-tip{background:#fff;width:17px;height:17px;padding:1px;margin:-10px auto 0;transform:rotate(45deg);}
+.leaflet-popup-close-button{position:absolute;top:0;right:0;padding:4px 4px 0 0;text-align:center;width:24px;height:24px;font:16px/24px Tahoma,Verdana,sans-serif;color:#757575;text-decoration:none;}
+.leaflet-container{-webkit-tap-highlight-color:transparent;}
+.leaflet-fade-anim .leaflet-popup{opacity:0;transition:opacity .2s linear;}
+.leaflet-fade-anim .leaflet-map-pane .leaflet-popup{opacity:1;}
+.leaflet-grab{cursor:grab;}
+</style>
+<style>
+  :root{
+    --bg:#12161A; --panel:#1B2128; --panel2:#232B33; --line:#2E3944;
+    --amber:#F2A93B; --amber-dim:#8A6420; --red:#E5484D; --green:#3DBE7A;
+    --text:#E7ECEF; --muted:#8B99A6; --mono:'Courier New', ui-monospace, monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; margin:0; overscroll-behavior:none;}
+  .mono{font-family:var(--mono);}
+  .panel{background:var(--panel); border:1px solid var(--line); border-radius:10px;}
+  .btn{border-radius:8px; padding:14px 18px; font-weight:600; font-size:15px; width:100%; transition:transform .08s ease;}
+  .btn:active{transform:scale(0.98);}
+  .btn-amber{background:var(--amber); color:#1A1204;}
+  .btn-outline{background:transparent; border:1px solid var(--line); color:var(--text);}
+  input,select{background:var(--panel2); border:1px solid var(--line); color:var(--text); border-radius:8px; padding:12px; width:100%; font-size:15px;}
+  input:focus,select:focus{outline:none; border-color:var(--amber);}
+  label{font-size:13px; color:var(--muted); display:block; margin-bottom:6px;}
+  .flash-alert{animation:flashbg 0.5s infinite;}
+  @keyframes flashbg{0%,100%{background:#3A0E10;} 50%{background:var(--red);}}
+  .dot{width:8px;height:8px;border-radius:50%;display:inline-block;}
+  .step-hidden{display:none;}
+  ::-webkit-scrollbar{width:6px;} ::-webkit-scrollbar-thumb{background:var(--line); border-radius:4px;}
+  #gforceRing{transition:stroke .2s ease;}
+</style>
+</head>
+<body>
+
+<!-- ============ HEADER: แสดงชื่อระบบและสถานะการเชื่อมต่อ ============ -->
+<header class="sticky top-0 z-30" style="background:var(--panel); border-bottom:1px solid var(--line);">
+  <div class="max-w-md mx-auto px-4 py-3 flex items-center justify-between">
+    <div class="flex items-center gap-2">
+      <div style="width:34px;height:34px;background:var(--amber);border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:800;color:#1A1204;">C</div>
+      <div>
+        <div style="font-weight:700; font-size:15px; line-height:1.1;">CargoSafety Track</div>
+        <div style="font-size:11px; color:var(--muted);">ระบบตรวจจับแรงกระแทกขนส่ง</div>
+      </div>
+    </div>
+    <div class="flex items-center gap-1.5 mono" style="font-size:12px;">
+      <span id="connDot" class="dot" style="background:var(--muted);"></span>
+      <span id="connText" style="color:var(--muted);">OFFLINE</span>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-md mx-auto px-4 pb-10 pt-4">
+
+  <!-- ============ STEP 1: TRIP SETUP FORM ============ -->
+  <section id="step1" class="space-y-4">
+    <div class="panel p-4 space-y-4">
+      <div style="font-size:13px; color:var(--amber); font-weight:700;">ขั้นตอนที่ 1 · ตั้งค่าเที่ยววิ่ง</div>
+      <div>
+        <label>ทะเบียนรถ (Vehicle ID)</label>
+        <input id="vehicleId" type="text" placeholder="เช่น 70-1234 กรุงเทพฯ">
+      </div>
+      <div>
+        <label>เส้นทางขนส่ง</label>
+        <input id="routeName" type="text" placeholder="เช่น คลังสินค้าลาดกระบัง → ระยอง">
+      </div>
+      <div>
+        <label>ประเภทสินค้า</label>
+        <select id="cargoType">
+          <option value="2.0">สินค้าทั่วไป (Threshold 2.0G)</option>
+          <option value="1.2">สินค้าแตกหักง่าย (Threshold 1.2G)</option>
+          <option value="1.5">เครื่องใช้ไฟฟ้า (Threshold 1.5G)</option>
+        </select>
+      </div>
+      <button class="btn btn-amber" onclick="goToStep(2)">ยืนยันและไปขั้นตอนถัดไป</button>
+    </div>
+  </section>
+
+  <!-- ============ STEP 2: PRE-TRIP INSPECTION ============ -->
+  <section id="step2" class="step-hidden space-y-4">
+    <div class="panel p-4 space-y-4">
+      <div style="font-size:13px; color:var(--amber); font-weight:700;">ขั้นตอนที่ 2 · ตรวจสอบการจัดวางสินค้า</div>
+      <div id="camWrap" class="panel" style="aspect-ratio:4/3; overflow:hidden; display:flex; align-items:center; justify-content:center; background:#0C0F12;">
+        <video id="camVideo" autoplay playsinline class="step-hidden" style="width:100%;height:100%;object-fit:cover;"></video>
+        <canvas id="camCanvas" class="step-hidden"></canvas>
+        <span id="camPlaceholder" style="color:var(--muted); font-size:13px;">ยังไม่ได้เปิดกล้อง</span>
+      </div>
+      <button id="camBtn" class="btn btn-outline" onclick="handleCamera()">📷 เปิดกล้องถ่ายภาพตู้สินค้า/พาเลท</button>
+
+      <div id="visionResult" class="step-hidden panel p-3" style="border-left:4px solid var(--line);">
+        <div id="visionText" class="mono" style="font-size:14px; font-weight:700;"></div>
+        <div id="visionDetail" style="font-size:12px; color:var(--muted); margin-top:4px;"></div>
+      </div>
+
+      <button class="btn btn-amber" onclick="startTrip()">เริ่มออกเดินทาง</button>
+      <button class="btn btn-outline" onclick="goToStep(1)">ย้อนกลับ</button>
+    </div>
+  </section>
+
+  <!-- ============ STEP 3: IN-TRANSIT LIVE MONITORING ============ -->
+  <section id="step3" class="step-hidden space-y-4">
+    <div id="alertBanner" class="step-hidden panel p-3 text-center flash-alert" style="border:1px solid var(--red);">
+      <div style="font-weight:800; font-size:15px;">⚠ แรงกระแทกเกินค่ากำหนด — โปรดชะลอความเร็ว</div>
+    </div>
+
+    <div class="panel p-4">
+      <div class="flex items-center justify-between mb-2">
+        <div style="font-size:13px; color:var(--muted);">G-Force ปัจจุบัน</div>
+        <div style="font-size:11px; color:var(--muted);" class="mono">Threshold: <span id="thresholdLabel">-</span>G</div>
+      </div>
+      <div class="flex items-center justify-center py-2">
+        <svg width="180" height="180" viewBox="0 0 180 180">
+          <circle cx="90" cy="90" r="78" fill="none" stroke="var(--line)" stroke-width="12"/>
+          <circle id="gforceRing" cx="90" cy="90" r="78" fill="none" stroke="var(--green)" stroke-width="12"
+            stroke-linecap="round" stroke-dasharray="490" stroke-dashoffset="490" transform="rotate(-90 90 90)"/>
+          <text x="90" y="83" text-anchor="middle" font-size="30" font-weight="800" fill="var(--text)" font-family="Courier New" id="gforceText">0.00</text>
+          <text x="90" y="105" text-anchor="middle" font-size="12" fill="var(--muted)">G-Force</text>
+        </svg>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-3">
+      <div class="panel p-3 text-center">
+        <div style="font-size:11px; color:var(--muted);">ความเร็ว</div>
+        <div id="speedVal" class="mono" style="font-size:20px; font-weight:700;">0 km/h</div>
+      </div>
+      <div class="panel p-3 text-center">
+        <div style="font-size:11px; color:var(--muted);">การกระแทกรุนแรง</div>
+        <div id="impactCount" class="mono" style="font-size:20px; font-weight:700; color:var(--red);">0</div>
+      </div>
+    </div>
+
+    <div class="panel p-4">
+      <div style="font-size:12px; color:var(--muted); margin-bottom:6px;">กราฟความสั่นสะเทือน (Real-Time)</div>
+      <canvas id="vibChart" height="140"></canvas>
+    </div>
+
+    <button class="btn btn-amber" style="background:var(--red); color:#fff;" onclick="endTrip()">จบเที่ยววิ่ง</button>
+  </section>
+
+  <!-- ============ STEP 4: TRIP SUMMARY REPORT ============ -->
+  <section id="step4" class="step-hidden space-y-4">
+    <div class="panel p-4">
+      <div style="font-size:13px; color:var(--amber); font-weight:700; margin-bottom:10px;">สรุปผลเที่ยววิ่ง</div>
+      <div class="grid grid-cols-2 gap-3 mb-3">
+        <div class="panel p-3"><div style="font-size:11px;color:var(--muted);">ระยะเวลา</div><div id="sumDuration" class="mono" style="font-size:18px;font-weight:700;">-</div></div>
+        <div class="panel p-3"><div style="font-size:11px;color:var(--muted);">Peak G-Force</div><div id="sumPeak" class="mono" style="font-size:18px;font-weight:700;">-</div></div>
+        <div class="panel p-3"><div style="font-size:11px;color:var(--muted);">จำนวนครั้งกระแทก</div><div id="sumImpacts" class="mono" style="font-size:18px;font-weight:700;">-</div></div>
+        <div class="panel p-3"><div style="font-size:11px;color:var(--muted);">ทะเบียนรถ</div><div id="sumVehicle" class="mono" style="font-size:14px;font-weight:700;">-</div></div>
+      </div>
+      <div id="mapView" style="height:220px; border-radius:8px; overflow:hidden; border:1px solid var(--line);"></div>
+    </div>
+    <button class="btn btn-amber" onclick="exportReport()">📄 ส่งออกรายงาน</button>
+    <button class="btn btn-outline" onclick="location.reload()">🔄 เริ่มเที่ยววิ่งใหม่</button>
+  </section>
+
+</main>
+
+<script>
+/* =======================================================================
+   CargoSafety Track — ระบบตรวจจับแรงกระแทกและความสั่นสะเทือนระหว่างขนส่ง
+   ทุกส่วนคำนวณและทำงานฝั่ง client (vanilla JS) ไม่มี backend
+   ======================================================================= */
+
+let state = {
+  vehicleId:'', route:'', threshold:2.0,
+  tripStartTime:null, peakG:0, impactCount:0,
+  hotspots:[], vibHistory:[], gpsWatchId:null, motionActive:false,
+  currentSpeed:0
+};
+
+// ---------- นำทางระหว่างขั้นตอน (Step Navigation) ----------
+function goToStep(n){
+  [1,2,3,4].forEach(i=>document.getElementById('step'+i).classList.add('step-hidden'));
+  document.getElementById('step'+n).classList.remove('step-hidden');
+}
+
+// ---------- STEP 1 -> เก็บค่าฟอร์ม ----------
+function collectTripSetup(){
+  state.vehicleId = document.getElementById('vehicleId').value || 'ไม่ระบุ';
+  state.route = document.getElementById('routeName').value || 'ไม่ระบุ';
+  state.threshold = parseFloat(document.getElementById('cargoType').value);
+  document.getElementById('thresholdLabel').textContent = state.threshold.toFixed(1);
+}
+
+// เรียกเก็บค่าทุกครั้งที่กดปุ่มไปขั้นตอน 2 (แก้ไข goToStep(2) ให้เก็บข้อมูลด้วย)
+const originalGoToStep2 = goToStep;
+document.querySelector('#step1 .btn-amber').addEventListener('click', collectTripSetup);
+
+// ---------- STEP 2: กล้องถ่ายภาพ + จำลอง Vision AI ----------
+let camStream = null;
+async function handleCamera(){
+  const video = document.getElementById('camVideo');
+  const placeholder = document.getElementById('camPlaceholder');
+  const btn = document.getElementById('camBtn');
+  try{
+    if(!camStream){
+      // ขอสิทธิ์กล้อง (ใช้กล้องหลังของมือถือ)
+      camStream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:'environment' }, audio:false });
+      video.srcObject = camStream;
+      video.classList.remove('step-hidden');
+      placeholder.classList.add('step-hidden');
+      btn.textContent = '📸 ถ่ายภาพและวิเคราะห์';
+    } else {
+      // ถ่ายภาพ (capture frame) แล้วจำลองผลการวิเคราะห์ด้วย AI
+      const canvas = document.getElementById('camCanvas');
+      canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+      canvas.getContext('2d').drawImage(video,0,0);
+      runSimulatedVisionAI();
+    }
+  }catch(err){
+    placeholder.textContent = 'ไม่สามารถเข้าถึงกล้องได้: ' + err.message;
+  }
+}
+
+function runSimulatedVisionAI(){
+  const resBox = document.getElementById('visionResult');
+  const text = document.getElementById('visionText');
+  const detail = document.getElementById('visionDetail');
+  resBox.classList.remove('step-hidden');
+  text.textContent = 'กำลังวิเคราะห์ภาพ...';
+  detail.textContent = '';
+  resBox.style.borderLeftColor = 'var(--muted)';
+  // จำลองเวลาประมวลผล AI แล้วสุ่มผลลัพธ์ (ในระบบจริงจะเรียก Vision API)
+  setTimeout(()=>{
+    const pass = Math.random() > 0.35;
+    if(pass){
+      text.textContent = '✓ PASS - สภาพการจัดวางปลอดภัย';
+      text.style.color = 'var(--green)';
+      resBox.style.borderLeftColor = 'var(--green)';
+      detail.textContent = 'ไม่พบช่องว่างระหว่างพาเลทที่เสี่ยงต่อการล้ม';
+    } else {
+      text.textContent = '⚠ WARNING - พบช่องว่างเสี่ยงต่อการล้ม';
+      text.style.color = 'var(--amber)';
+      resBox.style.borderLeftColor = 'var(--amber)';
+      detail.textContent = 'Void Space Detected — แนะนำให้จัดเรียงสินค้าใหม่ก่อนออกเดินทาง';
+    }
+  }, 1200);
+}
+
+// ---------- STEP 3: เริ่มต้นเที่ยววิ่งและระบบตรวจจับ Real-Time ----------
+async function startTrip(){
+  if(camStream){ camStream.getTracks().forEach(t=>t.stop()); }
+  state.tripStartTime = Date.now();
+  state.peakG = 0; state.impactCount = 0; state.hotspots = []; state.vibHistory = [];
+  goToStep(3);
+  initVibChart();
+  await requestMotionPermission();
+  startGPS();
+}
+
+// ---------- ขอสิทธิ์ใช้งานเซนเซอร์ (จำเป็นสำหรับ iOS 13+) ----------
+async function requestMotionPermission(){
+  // iOS Safari ต้องขอ permission แบบ explicit ผ่าน user gesture ก่อนเข้าถึง DeviceMotionEvent
+  if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function'){
+    try{
+      const perm = await DeviceMotionEvent.requestPermission();
+      if(perm === 'granted'){ attachMotionListener(); }
+      else { alert('กรุณาอนุญาตการเข้าถึงเซนเซอร์การเคลื่อนไหวเพื่อใช้งานฟังก์ชันตรวจจับแรงกระแทก'); }
+    }catch(e){ console.warn('Motion permission error:', e); }
+  } else {
+    // Android / เบราว์เซอร์อื่นที่ไม่ต้องขอ permission แบบ explicit
+    attachMotionListener();
+  }
+}
+
+function attachMotionListener(){
+  state.motionActive = true;
+  setConn(true);
+  window.addEventListener('devicemotion', onDeviceMotion);
+}
+
+function onDeviceMotion(e){
+  const acc = e.accelerationIncludingGravity || e.acceleration;
+  if(!acc || acc.x===null) return;
+  // คำนวณค่า G-Force รวมจากแกน x, y, z หารด้วยค่าแรงโน้มถ่วงมาตรฐาน 9.81 m/s²
+  const gForce = Math.sqrt((acc.x||0)**2 + (acc.y||0)**2 + (acc.z||0)**2) / 9.81;
+  updateGForceUI(gForce);
+}
+
+// ---------- ตำแหน่ง GPS และความเร็ว ----------
+function startGPS(){
+  if(!navigator.geolocation){ return; }
+  state.gpsWatchId = navigator.geolocation.watchPosition(pos=>{
+    setConn(true);
+    const kmh = pos.coords.speed ? (pos.coords.speed*3.6) : 0;
+    state.currentSpeed = kmh;
+    document.getElementById('speedVal').textContent = Math.round(kmh) + ' km/h';
+    state.lastCoords = { lat:pos.coords.latitude, lng:pos.coords.longitude };
+  }, err=>{ console.warn('GPS error:', err); }, { enableHighAccuracy:true, maximumAge:1000 });
+}
+
+function setConn(online){
+  const dot = document.getElementById('connDot');
+  const txt = document.getElementById('connText');
+  dot.style.background = online ? 'var(--green)' : 'var(--muted)';
+  txt.textContent = online ? 'ONLINE' : 'OFFLINE';
+  txt.style.color = online ? 'var(--green)' : 'var(--muted)';
+}
+
+// ---------- อัปเดตหน้าจอ Live Dashboard ----------
+let vibChart;
+function initVibChart(){
+  const ctx = document.getElementById('vibChart');
+  vibChart = new Chart(ctx, {
+    type:'line',
+    data:{ labels:[], datasets:[{ data:[], borderColor:'#F2A93B', backgroundColor:'rgba(242,169,59,0.15)', fill:true, tension:0.3, pointRadius:0, borderWidth:2 }] },
+    options:{
+      animation:false, responsive:true,
+      plugins:{ legend:{display:false} },
+      scales:{
+        x:{ display:false },
+        y:{ min:0, suggestedMax:3, grid:{ color:'#2E3944' }, ticks:{ color:'#8B99A6', font:{size:10} } }
+      }
+    }
+  });
+}
+
+function updateGForceUI(g){
+  document.getElementById('gforceText').textContent = g.toFixed(2);
+  if(g > state.peakG) state.peakG = g;
+
+  // อัปเดตวงแหวน gauge (circumference ≈ 490, สเกลสูงสุดที่ 4G)
+  const pct = Math.min(g/4, 1);
+  const ring = document.getElementById('gforceRing');
+  ring.setAttribute('stroke-dashoffset', 490 - (490*pct));
+  ring.style.stroke = g >= state.threshold ? 'var(--red)' : (g >= state.threshold*0.75 ? 'var(--amber)' : 'var(--green)');
+
+  // อัปเดตกราฟเส้น (เก็บย้อนหลัง 40 จุดล่าสุด)
+  if(vibChart){
+    const ds = vibChart.data;
+    ds.labels.push('');
+    ds.datasets[0].data.push(g);
+    if(ds.labels.length > 40){ ds.labels.shift(); ds.datasets[0].data.shift(); }
+    vibChart.update('none');
+  }
+
+  // ตรวจสอบว่าเกิน Threshold หรือไม่ -> ระบบแจ้งเตือนฉุกเฉิน
+  if(g >= state.threshold){
+    triggerAlert(g);
+  }
+}
+
+let lastAlertTime = 0;
+function triggerAlert(g){
+  const now = Date.now();
+  document.getElementById('alertBanner').classList.remove('step-hidden');
+  // กันไม่ให้นับซ้ำถี่เกินไป (debounce 1.5 วินาทีต่อครั้ง)
+  if(now - lastAlertTime > 1500){
+    lastAlertTime = now;
+    state.impactCount++;
+    document.getElementById('impactCount').textContent = state.impactCount;
+    playBeep();
+    if(state.lastCoords){
+      state.hotspots.push({ ...state.lastCoords, g: g.toFixed(2) });
+    }
+    // ปิดแบนเนอร์แจ้งเตือนหลังจาก 2 วินาที
+    setTimeout(()=>{ document.getElementById('alertBanner').classList.add('step-hidden'); }, 2000);
+  }
+}
+
+// ---------- เสียงแจ้งเตือน (สร้างด้วย Web Audio API แทนไฟล์เสียงภายนอก) ----------
+function playBeep(){
+  try{
+    const ctxA = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctxA.createOscillator();
+    const gain = ctxA.createGain();
+    osc.type = 'square'; osc.frequency.value = 880;
+    gain.gain.setValueAtTime(0.15, ctxA.currentTime);
+    osc.connect(gain); gain.connect(ctxA.destination);
+    osc.start(); osc.stop(ctxA.currentTime + 0.25);
+  }catch(e){ console.warn('Audio error:', e); }
+  if(navigator.vibrate){ navigator.vibrate([150,80,150]); }
+}
+
+// ---------- STEP 3 -> STEP 4: จบเที่ยววิ่ง ----------
+function endTrip(){
+  window.removeEventListener('devicemotion', onDeviceMotion);
+  if(state.gpsWatchId) navigator.geolocation.clearWatch(state.gpsWatchId);
+
+  const durationMs = Date.now() - state.tripStartTime;
+  const mins = Math.floor(durationMs/60000);
+  const secs = Math.floor((durationMs%60000)/1000);
+
+  document.getElementById('sumDuration').textContent = `${mins} นาที ${secs} วิ`;
+  document.getElementById('sumPeak').textContent = state.peakG.toFixed(2) + ' G';
+  document.getElementById('sumImpacts').textContent = state.impactCount + ' ครั้ง';
+  document.getElementById('sumVehicle').textContent = state.vehicleId;
+
+  goToStep(4);
+  renderHotspotMap();
+}
+
+// ---------- แผนที่แสดงจุดเกิดแรงกระแทก (Leaflet.js) ----------
+function renderHotspotMap(){
+  const center = state.hotspots.length ? [state.hotspots[0].lat, state.hotspots[0].lng] :
+                 (state.lastCoords ? [state.lastCoords.lat, state.lastCoords.lng] : [13.7563, 100.5018]);
+  const map = L.map('mapView').setView(center, 12);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors', maxZoom: 18
+  }).addTo(map);
+
+  if(state.hotspots.length === 0){
+    L.marker(center).addTo(map).bindPopup('ไม่พบจุดที่เกิดแรงกระแทกรุนแรง').openPopup();
+  } else {
+    state.hotspots.forEach(h=>{
+      L.circleMarker([h.lat, h.lng], { radius:9, color:'#E5484D', fillColor:'#E5484D', fillOpacity:0.7 })
+        .addTo(map).bindPopup(`แรงกระแทก: ${h.g}G`);
+    });
+  }
+  setTimeout(()=>map.invalidateSize(), 200);
+}
+
+// ---------- ส่งออกรายงาน (สร้างไฟล์ข้อความสรุปให้ดาวน์โหลด) ----------
+function exportReport(){
+  const report =
+`CargoSafety Track — รายงานสรุปเที่ยววิ่ง
+=========================================
+ทะเบียนรถ: ${state.vehicleId}
+เส้นทาง: ${state.route}
+ค่า Threshold: ${state.threshold}G
+ระยะเวลา: ${document.getElementById('sumDuration').textContent}
+Peak G-Force: ${document.getElementById('sumPeak').textContent}
+จำนวนครั้งที่เกิดแรงกระแทกรุนแรง: ${document.getElementById('sumImpacts').textContent}
+
+จุดเกิดแรงกระแทก (Hotspots):
+${state.hotspots.map((h,i)=>`  ${i+1}. lat:${h.lat.toFixed(5)}, lng:${h.lng.toFixed(5)} — ${h.g}G`).join('\n') || '  ไม่พบ'}
+`;
+  const blob = new Blob([report], { type:'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `cargosafety-report-${Date.now()}.txt`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+</script>
+</body>
+</html>
